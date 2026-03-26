@@ -1,7 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { hash } from "bcryptjs";
-import "dotenv/config";
+
+// dotenv sadece local dev'de gerekli, Docker'da env var'lar container'dan gelir
+try {
+  require("dotenv/config");
+} catch {}
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });

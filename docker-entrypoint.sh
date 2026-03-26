@@ -2,12 +2,13 @@
 set -e
 
 echo "🦷 DENT-ALP OS — Starting..."
+echo "📦 DATABASE_URL set: $([ -n "$DATABASE_URL" ] && echo 'yes' || echo 'NO!')"
 
-# Run migrations — schema path explicit
-echo "📦 Running database migrations..."
-./node_modules/.bin/prisma db push --schema=./prisma/schema.prisma --accept-data-loss 2>/dev/null || echo "⚠️ DB push skipped"
+# Schema push
+echo "📦 Pushing database schema..."
+./node_modules/.bin/prisma db push --schema=./prisma/schema.prisma --accept-data-loss || echo "⚠️ DB push failed, continuing..."
 
-# Seed only if SEED_DB=true
+# Seed
 if [ "$SEED_DB" = "true" ]; then
   echo "🌱 Seeding database..."
   node --import tsx prisma/seed.ts || echo "⚠️ Seed failed"
