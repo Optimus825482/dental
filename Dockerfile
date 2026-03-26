@@ -5,8 +5,7 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY package.json package-lock.json ./
-# prisma schema deps aşamasında gerekli (postinstall için değil, sadece lock için)
-COPY prisma ./prisma
+COPY prisma/schema.prisma ./prisma/schema.prisma
 RUN npm ci --ignore-scripts
 
 # ── builder ───────────────────────────────────────────────
@@ -16,8 +15,8 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Prisma client generate (schema artık mevcut)
-RUN npx prisma generate
+# prisma.config.ts'i bypass ederek doğrudan schema ile generate
+RUN npx prisma generate --schema=./prisma/schema.prisma
 
 # Build
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -38,7 +37,7 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Prisma schema + migrations + seed için
+# Prisma + seed için gerekli dosyalar
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
