@@ -19,7 +19,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npx next build
+RUN npx next build --no-turbopack
 
 # ── runner ────────────────────────────────────────────────
 FROM base AS runner
