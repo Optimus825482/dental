@@ -2,8 +2,6 @@
 set -e
 
 echo "🦷 DENT-ALP OS — Starting..."
-echo "📦 DATABASE_URL set: $([ -n "$DATABASE_URL" ] && echo 'yes' || echo 'NO!')"
-echo "📦 DB Host: $(echo $DATABASE_URL | sed 's/.*@\(.*\):.*/\1/')"
 
 # DB'nin hazır olmasını bekle
 echo "⏳ Waiting for database..."
@@ -20,9 +18,9 @@ for i in $(seq 1 30); do
   sleep 2
 done
 
-# Schema push
+# Schema push — --url ile doğrudan DATABASE_URL geç
 echo "📦 Pushing database schema..."
-DATABASE_URL="$DATABASE_URL" ./node_modules/.bin/prisma db push --schema=./prisma/schema.prisma --accept-data-loss || echo "⚠️ DB push failed"
+./node_modules/.bin/prisma db push --schema=./prisma/schema.prisma --url="$DATABASE_URL" --accept-data-loss || echo "⚠️ DB push failed"
 
 # Seed
 if [ "$SEED_DB" = "true" ]; then
