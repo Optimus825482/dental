@@ -69,7 +69,7 @@ export async function PUT(
     );
   }
 
-  const { birthDate, ...data } = parsed.data;
+  const { birthDate, allergies, ...data } = parsed.data;
 
   try {
     const patient = await prisma.patient.update({
