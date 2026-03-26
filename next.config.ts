@@ -2,7 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  // Coolify reverse proxy için
+  // Turbopack yerine Webpack kullan — Docker build'de PostCSS uyumluluğu için
+  bundlePagesRouterDependencies: true,
   experimental: {
     serverActions: {
       allowedOrigins: ["dental.royalfnb.com"],
