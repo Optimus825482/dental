@@ -60,7 +60,7 @@ export function StartMenu({ open, onClose }: Props) {
   if (!open) return null;
 
   function launch(app: (typeof apps)[0]) {
-    openWindow(app.id, app.label, app.icon);
+    openWindow(app.id, app.label, app.id);
     onClose();
   }
 
