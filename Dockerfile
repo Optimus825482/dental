@@ -19,7 +19,7 @@ COPY . .
 # Force webpack builder — Turbopack'i tamamen devre dışı bırak
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_PRIVATE_STANDALONE=true
-RUN node node_modules/.bin/next build --webpack
+RUN npx next build --webpack
 
 # ── runner ────────────────────────────────────────────────
 FROM base AS runner

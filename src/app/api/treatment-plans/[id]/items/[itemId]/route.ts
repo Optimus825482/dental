@@ -21,7 +21,10 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
 
     const item = await prisma.treatmentPlanItem.findUnique({
       where: { id: itemId },
-      include: { plan: { select: { patientId: true } } },
+      include: {
+        plan: { select: { patientId: true } },
+        treatmentDef: { select: { name: true } },
+      },
     });
 
     if (!item)
