@@ -89,11 +89,14 @@ async function main() {
 
   for (const doc of doctors) {
     const email = `${doc.name.split(" ")[1]?.toLowerCase() ?? "dr"}@hendekdis.com`;
-    await prisma.doctor.upsert({
-      where: { clinicId_email: { clinicId: clinic.id, email } },
-      update: {},
-      create: { clinicId: clinic.id, ...doc, email },
+    const exists = await prisma.doctor.findFirst({
+      where: { clinicId: clinic.id, name: doc.name },
     });
+    if (!exists) {
+      await prisma.doctor.create({
+        data: { clinicId: clinic.id, ...doc, email },
+      });
+    }
   }
 
   // Treatment Definitions

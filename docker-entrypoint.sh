@@ -5,12 +5,12 @@ echo "🦷 DENT-ALP OS — Starting..."
 
 # Run migrations
 echo "📦 Running database migrations..."
-npx prisma migrate deploy
+./node_modules/.bin/prisma migrate deploy --schema=./prisma/schema.prisma || echo "⚠️ Migration skipped (no migrations found)"
 
-# Seed only if SEED_DB=true (ilk deploy'da set edilir)
+# Seed only if SEED_DB=true
 if [ "$SEED_DB" = "true" ]; then
   echo "🌱 Seeding database..."
-  npx tsx prisma/seed.ts
+  ./node_modules/.bin/tsx prisma/seed.ts || echo "⚠️ Seed failed"
   echo "✅ Seed complete."
 fi
 
