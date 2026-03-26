@@ -1,0 +1,547 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ═══════════════════════════════════════════
+// AUTH & USERS
+// ═══════════════════════════════════════════
+
+model Clinic {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  phone     String?
+  email     String?
+  address   String?
+  logo      String?
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users        User[]
+  patients     Patient[]
+  doctors      Doctor[]
+  appointments Appointment[]
+  treatments   TreatmentDefinition[]
+  products     Product[]
+}
+
+model User {
+  id          String    @id @default(cuid())
+  clinicId    String
+  email       String    @unique
+  username    String    @unique
+  password    String
+  name        String
+  role        UserRole  @default(SECRETARY)
+  avatar      String?
+  isActive    Boolean   @default(true)
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  clinic           Clinic           @relation(fields: [clinicId], references: [id])
+  activityLogs     ActivityLog[]
+  desktopSettings  UserDesktopSettings?
+
+  @@index([clinicId])
+}
+
+enum UserRole {
+  ADMIN
+  DOCTOR
+  SECRETARY
+  ACCOUNTANT
+  VIEWER
+}
+
+model Doctor {
+  id           String   @id @default(cuid())
+  clinicId     String
+  name         String
+  title        String?
+  specialty    String?
+  email        String?
+  phone        String?
+  avatar       String?
+  color        String   @default("#00677e")
+  isActive     Boolean  @default(true)
+  workingHours Json     @default("{}")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  clinic         Clinic          @relation(fields: [clinicId], references: [id])
+  appointments   Appointment[]
+  treatmentPlans TreatmentPlan[]
+
+  @@index([clinicId])
+}
+
+// ═══════════════════════════════════════════
+// PATIENT MANAGEMENT
+// ═══════════════════════════════════════════
+
+model Patient {
+  id               String    @id @default(cuid())
+  clinicId         String
+  patientNo        String
+  tcKimlik         String?
+  firstName        String
+  lastName         String
+  birthDate        DateTime?
+  gender           Gender?
+  bloodType        String?
+  phone            String
+  email            String?
+  address          String?
+  emergencyContact String?
+  emergencyPhone   String?
+  insuranceType    String?
+  insuranceNo      String?
+  avatar           String?
+  notes            String?
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  clinic          Clinic             @relation(fields: [clinicId], references: [id])
+  allergies       PatientAllergy[]
+  medications     PatientMedication[]
+  appointments    Appointment[]
+  treatmentPlans  TreatmentPlan[]
+  dentalChart     DentalChart[]
+  documents       PatientDocument[]
+  account         PatientAccount?
+  transactions    Transaction[]
+  radiologyImages RadiologyImage[]
+
+  @@unique([clinicId, patientNo])
+  @@index([clinicId])
+  @@index([phone])
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+model PatientAllergy {
+  id        String        @id @default(cuid())
+  patientId String
+  allergen  String
+  severity  AlertSeverity @default(HIGH)
+  notes     String?
+  createdAt DateTime      @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+}
+
+model PatientMedication {
+  id        String    @id @default(cuid())
+  patientId String
+  name      String
+  dosage    String?
+  frequency String?
+  startDate DateTime?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+// ═══════════════════════════════════════════
+// APPOINTMENT MANAGEMENT
+// ═══════════════════════════════════════════
+
+model Appointment {
+  id           String            @id @default(cuid())
+  clinicId     String
+  patientId    String
+  doctorId     String
+  chairNo      Int               @default(1)
+  startTime    DateTime
+  endTime      DateTime
+  status       AppointmentStatus @default(SCHEDULED)
+  type         String?
+  color        String?
+  notes        String?
+  reminderSent Boolean           @default(false)
+  source       AppointmentSource @default(MANUAL)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  clinic  Clinic  @relation(fields: [clinicId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id])
+  doctor  Doctor  @relation(fields: [doctorId], references: [id])
+
+  @@index([clinicId, startTime])
+  @@index([doctorId, startTime])
+  @@index([patientId])
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum AppointmentSource {
+  MANUAL
+  ONLINE
+  PHONE
+  WAITLIST
+}
+
+// ═══════════════════════════════════════════
+// TREATMENT MANAGEMENT
+// ═══════════════════════════════════════════
+
+model TreatmentDefinition {
+  id          String   @id @default(cuid())
+  clinicId    String
+  code        String?
+  name        String
+  category    String?
+  price       Decimal  @db.Decimal(10, 2)
+  duration    Int      @default(30)
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  clinic    Clinic              @relation(fields: [clinicId], references: [id])
+  planItems TreatmentPlanItem[]
+
+  @@unique([clinicId, code])
+  @@index([clinicId])
+}
+
+model TreatmentPlan {
+  id        String              @id @default(cuid())
+  patientId String
+  doctorId  String
+  title     String?
+  status    TreatmentPlanStatus @default(DRAFT)
+  totalCost Decimal             @db.Decimal(10, 2) @default(0)
+  discount  Decimal             @db.Decimal(10, 2) @default(0)
+  notes     String?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  patient  Patient             @relation(fields: [patientId], references: [id])
+  doctor   Doctor              @relation(fields: [doctorId], references: [id])
+  items    TreatmentPlanItem[]
+  sessions TreatmentSession[]
+
+  @@index([patientId])
+}
+
+model TreatmentPlanItem {
+  id             String     @id @default(cuid())
+  planId         String
+  treatmentDefId String
+  toothNumber    Int?
+  quantity       Int        @default(1)
+  unitPrice      Decimal    @db.Decimal(10, 2)
+  discount       Decimal    @db.Decimal(10, 2) @default(0)
+  status         ItemStatus @default(PLANNED)
+  notes          String?
+  completedAt    DateTime?
+  createdAt      DateTime   @default(now())
+
+  plan         TreatmentPlan       @relation(fields: [planId], references: [id], onDelete: Cascade)
+  treatmentDef TreatmentDefinition @relation(fields: [treatmentDefId], references: [id])
+
+  @@index([planId])
+}
+
+model TreatmentSession {
+  id        String        @id @default(cuid())
+  planId    String
+  sessionNo Int
+  date      DateTime
+  notes     String?
+  status    SessionStatus @default(SCHEDULED)
+  createdAt DateTime      @default(now())
+
+  plan TreatmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+}
+
+enum TreatmentPlanStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum ItemStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum SessionStatus {
+  SCHEDULED
+  COMPLETED
+  MISSED
+  CANCELLED
+}
+
+// ═══════════════════════════════════════════
+// DENTAL CHART & RADIOLOGY
+// ═══════════════════════════════════════════
+
+model DentalChart {
+  id          String         @id @default(cuid())
+  patientId   String
+  toothNumber Int
+  condition   ToothCondition @default(HEALTHY)
+  surface     String?
+  notes       String?
+  updatedAt   DateTime       @updatedAt
+  createdAt   DateTime       @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@unique([patientId, toothNumber])
+  @@index([patientId])
+}
+
+enum ToothCondition {
+  HEALTHY
+  FILLING_NEEDED
+  ROOT_CANAL
+  EXTRACTION
+  IMPLANT
+  CROWN
+  BRIDGE
+  MISSING
+  FILLED
+  TREATED
+}
+
+model RadiologyImage {
+  id          String   @id @default(cuid())
+  patientId   String
+  type        String
+  fileUrl     String
+  fileName    String
+  fileSize    Int?
+  toothNumber Int?
+  notes       String?
+  annotations Json?
+  createdAt   DateTime @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+}
+
+model PatientDocument {
+  id        String   @id @default(cuid())
+  patientId String
+  category  String
+  fileName  String
+  fileUrl   String
+  fileSize  Int?
+  ocrText   String?
+  version   Int      @default(1)
+  createdAt DateTime @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+}
+
+// ═══════════════════════════════════════════
+// FINANCIAL / CARİ HESAP
+// ═══════════════════════════════════════════
+
+model PatientAccount {
+  id        String   @id @default(cuid())
+  patientId String   @unique
+  balance   Decimal  @db.Decimal(10, 2) @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [id])
+}
+
+model Transaction {
+  id            String          @id @default(cuid())
+  patientId     String
+  type          TransactionType
+  amount        Decimal         @db.Decimal(10, 2)
+  paymentMethod PaymentMethod?
+  description   String?
+  receiptNo     String?
+  invoiceNo     String?
+  installments  Int?
+  relatedPlanId String?
+  createdBy     String?
+  createdAt     DateTime        @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
+  @@index([createdAt])
+}
+
+enum TransactionType {
+  CHARGE
+  PAYMENT
+  DISCOUNT
+  REFUND
+  INSURANCE
+  ADJUSTMENT
+}
+
+enum PaymentMethod {
+  CASH
+  CREDIT_CARD
+  DEBIT_CARD
+  TRANSFER
+  INSTALLMENT
+  INSURANCE
+}
+
+// ═══════════════════════════════════════════
+// STOCK / PRODUCT MANAGEMENT
+// ═══════════════════════════════════════════
+
+model Product {
+  id           String   @id @default(cuid())
+  clinicId     String
+  name         String
+  sku          String?
+  category     String?
+  unit         String   @default("adet")
+  currentStock Int      @default(0)
+  minStock     Int      @default(5)
+  price        Decimal  @db.Decimal(10, 2) @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  clinic    Clinic          @relation(fields: [clinicId], references: [id])
+  movements StockMovement[]
+
+  @@index([clinicId])
+}
+
+model StockMovement {
+  id        String            @id @default(cuid())
+  productId String
+  type      StockMovementType
+  quantity  Int
+  notes     String?
+  createdBy String?
+  createdAt DateTime          @default(now())
+
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+}
+
+enum StockMovementType {
+  IN
+  OUT
+  ADJUSTMENT
+  RETURN
+}
+
+// ═══════════════════════════════════════════
+// NOTIFICATIONS & LOGS
+// ═══════════════════════════════════════════
+
+model Notification {
+  id        String   @id @default(cuid())
+  clinicId  String
+  userId    String?
+  type      String
+  title     String
+  message   String
+  channel   String
+  status    String   @default("pending")
+  sentAt    DateTime?
+  readAt    DateTime?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([clinicId, userId])
+  @@index([status])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+
+// ═══════════════════════════════════════════
+// USER DESKTOP SETTINGS (kişiye özel)
+// ═══════════════════════════════════════════
+
+model UserDesktopSettings {
+  id             String  @id @default(cuid())
+  userId         String  @unique
+  widgetsLocked  Boolean @default(false)
+  wallpaperId    String  @default("default")
+  zoomLevel      Int     @default(100)
+  widgetPositions Json?  // [{id, x, y}] — widget pozisyonları
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ═══════════════════════════════════════════
+// DIAGNOSIS CODES (ICD-10 / K00-K10)
+// ═══════════════════════════════════════════
+
+model DiagnosisCode {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  description String
+  parentCode  String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([code])
+  @@index([parentCode])
+}
